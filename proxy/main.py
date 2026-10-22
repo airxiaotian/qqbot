@@ -1,11 +1,26 @@
 """
 本地 OpenAI 兼容代理
-直连 GitHub Copilot API，把人设、完整聊天记录和消息时间一起发给模型。
+借用 Hermes 的 Copilot 认证直接调用模型，把人设、完整聊天记录和消息时间一起发给模型。
 """
 
 import base64
+import glob
 import os
 import re
+import sys
+
+HERMES_PATH = os.path.expanduser("~/.hermes/hermes-agent")
+HERMES_VENV = os.path.join(HERMES_PATH, "venv/lib")
+venv_site = glob.glob(os.path.join(HERMES_VENV, "python*/site-packages"))
+for p in venv_site:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+sys.path.insert(0, HERMES_PATH)
+
+from dotenv import load_dotenv
+
+load_dotenv(os.path.expanduser("~/.hermes/.env"))
+load_dotenv(os.path.join(HERMES_PATH, ".env"))
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -31,7 +46,6 @@ from dialog import (
 )
 from learn import apply_rule, group_judge_messages, load_rules, parse_group_judgment, propose_rule
 from search import search_snippets
-from copilot_client import chat_completions_create
 from perception import describe_image, transcribe_wav
 
 # 配置日志
@@ -52,20 +66,45 @@ _DATETIME_RE = re.compile(r"Current datetime:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2})"
 _ECHOED_META_RE = re.compile(r"^\s*[\[【][^\]】\n]*[\]】]\s*")
 # 模型偶尔先写一段分析，再用单独一行 --- 隔开真正的回复
 _REASONING_SPLIT_RE = re.compile(r"\n\s*-{3,}\s*\n")
-def call_model_sync(messages: list, max_tokens: int = MAX_TOKENS, temperature: float = TEMPERATURE, model: str = LIGHT_MODEL):
+
+_clients = {}
+
+
+def get_client(model: str):
+    if model not in _clients:
+        from agent.auxiliary_client import resolve_provider_client
+
+        client, _ = resolve_provider_client("copilot", model=model)
+        if client is None and model != LIGHT_MODEL:
+            logger.warning("%s 不可用，改用 %s", model, LIGHT_MODEL)
+            return get_client(LIGHT_MODEL)
+        if client is None:
+            raise RuntimeError(
+                "无法获取 Copilot 客户端，检查 ~/.hermes/.env 里的 COPILOT_GITHUB_TOKEN"
+            )
+        _clients[model] = client
+    return _clients[model]
+
+
+def call_model_sync(
+    messages: list,
+    max_tokens: int = MAX_TOKENS,
+    temperature: float = TEMPERATURE,
+    model: str = LIGHT_MODEL,
+):
     try:
-        return chat_completions_create(
+        return get_client(model).chat.completions.create(
             model=model,
             messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,
         )
-    except Exception as error:
-        logger.warning(f"模型 {model} 调用失败，重试 {LIGHT_MODEL}: {error}")
-        if model == LIGHT_MODEL:
-            raise
-        return chat_completions_create(
-            model=LIGHT_MODEL,
+    except Exception as e:
+        logger.warning("模型调用失败，重新获取客户端后重试: %s", e)
+        _clients.pop(model, None)
+        fallback = LIGHT_MODEL if model != LIGHT_MODEL else model
+        return get_client(fallback).chat.completions.create(
+            model=fallback,
             messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,
@@ -149,7 +188,7 @@ async def list_models():
     return {
         "object": "list",
         "data": [
-            {"id": "hermes-oneesan", "object": "model", "created": 1700000000, "owned_by": "copilot"},
+            {"id": "hermes-oneesan", "object": "model", "created": 1700000000, "owned_by": "hermes"},
         ]
     }
 
@@ -166,9 +205,13 @@ async def perceive_media(request: Request):
         blob = base64.b64decode(raw)
         loop = asyncio.get_event_loop()
         if kind == "image":
-            text = await loop.run_in_executor(executor, lambda: describe_image(raw))
+            text = await loop.run_in_executor(
+                executor, lambda: describe_image(raw, get_client)
+            )
         elif kind == "audio":
-            text = await loop.run_in_executor(executor, lambda: transcribe_wav(blob))
+            text = await loop.run_in_executor(
+                executor, lambda: transcribe_wav(blob, get_client)
+            )
         else:
             return JSONResponse({"ok": False, "error": "kind 必须是 image 或 audio"}, status_code=400)
         return {"ok": True, "text": text}

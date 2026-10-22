@@ -11,7 +11,7 @@ AstrBot (AI 机器人框架)
   ↓  
 本地代理 proxy:8766 (OpenAI 兼容)
   ↓
-GitHub Copilot API（`qqbot/.env` 里的 GITHUB_TOKEN）
+Hermes → GitHub Copilot（`~/.hermes/.env` 认证）
 ```
 
 ## 前置要求
@@ -119,15 +119,16 @@ docker-compose up -d --build
 docker exec -it [容器名] /bin/bash
 ```
 
-## 启动本地代理（Copilot）
+## 启动本地代理（Hermes + Copilot）
 
-本机执行（不依赖 Hermes venv）：
+本机需已安装 Hermes（`~/.hermes/hermes-agent`），Copilot 令牌配置在 `~/.hermes/.env`（如 `COPILOT_GITHUB_TOKEN`）。
 
 ```bash
 ~/qqbot/start_proxy.sh
+# 停止并禁用保活：~/qqbot/stop_proxy.sh
 ```
 
-在 `~/qqbot/.env` 配置 `GITHUB_TOKEN`（`gh auth login` 得到的 `gho_` / `github_pat_`，不要用 `ghp_` 经典 PAT）。可选环境变量：`QQBOT_MODEL`、`QQBOT_MODEL_HEAVY`。
+可选环境变量：`QQBOT_MODEL`、`QQBOT_MODEL_HEAVY`（在启动代理的 shell 或 cron 里 export）。
 
 ## 故障排查
 
