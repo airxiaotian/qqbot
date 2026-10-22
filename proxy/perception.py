@@ -3,6 +3,8 @@
 import os
 from io import BytesIO
 
+from copilot_client import chat_completions_create, get_openai_client
+
 VISION_MODEL = os.environ.get("QQBOT_VISION_MODEL", os.environ.get("QQBOT_MODEL_HEAVY", "claude-sonnet-4.6"))
 VISION_PROMPT = (
     "用中文一两句说明图片内容和文字（若有）。这是 QQ 聊天里对方发来的图，"
@@ -11,15 +13,14 @@ VISION_PROMPT = (
 WHISPER_MODEL = os.environ.get("QQBOT_WHISPER_MODEL", "whisper-1")
 
 
-def describe_image(b64: str, get_client) -> str:
+def describe_image(b64: str) -> str:
     raw = (b64 or "").strip()
     if raw.startswith("base64://"):
         raw = raw[9:]
     if not raw:
         return "（空的图片）"
     url = f"data:image/jpeg;base64,{raw}"
-    client = get_client(VISION_MODEL)
-    result = client.chat.completions.create(
+    result = chat_completions_create(
         model=VISION_MODEL,
         messages=[
             {
@@ -37,10 +38,10 @@ def describe_image(b64: str, get_client) -> str:
     return text or "（没能读出图里有什么）"
 
 
-def transcribe_wav(wav_bytes: bytes, get_client) -> str:
+def transcribe_wav(wav_bytes: bytes) -> str:
     if not wav_bytes:
         return "（空的语音）"
-    client = get_client(os.environ.get("QQBOT_MODEL", "claude-haiku-4.5"))
+    client = get_openai_client()
     if not hasattr(client, "audio") or not hasattr(client.audio, "transcriptions"):
         return "（语音转写未配置，需要支持 Whisper 的 API）"
     bio = BytesIO(wav_bytes)

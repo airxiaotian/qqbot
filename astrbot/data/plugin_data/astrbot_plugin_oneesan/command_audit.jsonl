@@ -6,3 +6,6 @@
 {"time": "1792661999", "session": "qq_napcat:FriendMessage:273585129", "tool": "mood", "stage": "执行", "args": "{}"}
 {"time": "1792662031", "session": "qq_napcat:FriendMessage:273585129", "tool": "memory_query", "stage": "执行", "args": "{\"text\": \"姐姐喜欢什么，讨厌什么\"}"}
 {"time": "1792662057", "session": "qq_napcat:FriendMessage:273585129", "tool": "memory_query", "stage": "执行", "args": "{\"text\": \"大肥鱼在群里说的\"}"}
+{"time": "1792663754", "session": "qq_napcat:FriendMessage:273585129", "tool": "speak", "stage": "执行", "args": "{\"text\": \"今晚给你做番茄鸡蛋面和青菜，再炖个汤。等我下班回来！\"}"}
+{"time": "1792663846", "session": "qq_napcat:FriendMessage:273585129", "tool": "health", "stage": "执行", "args": "{}"}
+{"time": "1792665881", "session": "qq_napcat:FriendMessage:273585129", "tool": "send_private", "stage": "等待确认", "args": "{\"target\": \"863318447\", \"text\": \"嗨呀，找你呢！\", \"session\": \"qq_napcat:FriendMessage:863318447\", \"label\": \"863318447\"}"}

@@ -9,9 +9,9 @@ NapCatQQ (QQ 无头框架，用小号登录)
   ↓
 AstrBot (AI 机器人框架)
   ↓  
-本地 Mock API (OpenAI 兼容)
+本地代理 proxy:8766 (OpenAI 兼容)
   ↓
-真实推理引擎 (后续升级成 Hermes / Claude / 等)
+GitHub Copilot API（`qqbot/.env` 里的 GITHUB_TOKEN）
 ```
 
 ## 前置要求
@@ -119,22 +119,15 @@ docker-compose up -d --build
 docker exec -it [容器名] /bin/bash
 ```
 
-## 升级到真实 Hermes
+## 启动本地代理（Copilot）
 
-等框架跑通后，修改 `proxy/main.py`：
-
-```python
-# 从 Mock API 改成：
-# 1. 调用 Hermes CLI 子进程
-# 2. 或直接调用 Hermes API 网关
-# 3. 或调用远程 Claude / OpenAI API
-```
-
-然后重建容器：
+本机执行（不依赖 Hermes venv）：
 
 ```bash
-docker-compose up -d --build
+~/qqbot/start_proxy.sh
 ```
+
+在 `~/qqbot/.env` 配置 `GITHUB_TOKEN`（`gh auth login` 得到的 `gho_` / `github_pat_`，不要用 `ghp_` 经典 PAT）。可选环境变量：`QQBOT_MODEL`、`QQBOT_MODEL_HEAVY`。
 
 ## 故障排查
 

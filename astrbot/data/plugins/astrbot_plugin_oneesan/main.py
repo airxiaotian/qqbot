@@ -34,6 +34,7 @@ from .moegirl import learn_moegirl_persona
 from .mood import concerns_her, mood_note, update_mood
 from .media_perceive import perceive
 from .persona_speak import OUTBOUND_SYSTEM, REWRITE_PROMPT
+from .sovits_tts import REF_AUDIO, SOVITS_URL, synthesize_to_file
 from .study import learn_once, learn_voice
 from .tools import (
     CLASSIFY_SYSTEM,
@@ -72,9 +73,6 @@ NEWS_COUNT = 20
 HISTORY_MESSAGES = 20
 VOICE_CHANCE = 0.3
 VOICE_MAX_CHARS = 80
-VOICE_NAME = "zh-CN-XiaoxiaoNeural"
-VOICE_RATE = "+0%"
-VOICE_PITCH = "+0Hz"
 MEMORY_MODEL = "oneesan-memory"
 EXECUTOR_URL = "http://host.docker.internal:8792"
 RESTART_INSTRUCTION = """只重启本机的 qqbot 服务：
@@ -1054,40 +1052,44 @@ class OneesanPlugin(Star):
         return True
 
     async def _synthesize(self, text: str) -> str | None:
-        try:
-            import edge_tts
-        except ImportError:
-            logger.error("[姐姐] 未安装 edge-tts，语音发送已跳过")
-            return None
         voice_dir = StarTools.get_data_dir(PLUGIN_NAME) / "voices"
         voice_dir.mkdir(parents=True, exist_ok=True)
         stamp = str(time.time_ns())
-        mp3_path = voice_dir / f"{stamp}.mp3"
-        wav_path = voice_dir / f"{stamp}.wav"
+        raw_path = voice_dir / f"{stamp}_sovits.wav"
+        out_path = voice_dir / f"{stamp}.wav"
+        if not REF_AUDIO:
+            logger.error("[姐姐] 未配置 SoVITS 参考音频 QQBOT_SOVITS_REF_AUDIO")
+            return None
         try:
-            await edge_tts.Communicate(
-                text,
-                VOICE_NAME,
-                rate=VOICE_RATE,
-                pitch=VOICE_PITCH,
-                volume="+5%",
-            ).save(str(mp3_path))
+            await synthesize_to_file(text, raw_path)
+        except Exception as error:
+            logger.error(f"[姐姐] SoVITS 合成失败 ({SOVITS_URL}): {error}")
+            return None
+        try:
             process = await asyncio.create_subprocess_exec(
-                "ffmpeg", "-y", "-i", str(mp3_path),
-                "-acodec", "pcm_s16le", "-ar", "24000", "-ac", "1",
-                str(wav_path),
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(raw_path),
+                "-acodec",
+                "pcm_s16le",
+                "-ar",
+                "24000",
+                "-ac",
+                "1",
+                str(out_path),
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
             )
-            if await process.wait() != 0 or not wav_path.exists() or wav_path.stat().st_size == 0:
-                logger.error("[姐姐] 语音转码失败")
+            if await process.wait() != 0 or not out_path.exists() or out_path.stat().st_size == 0:
+                logger.error("[姐姐] SoVITS 语音转码失败")
                 return None
-            return str(wav_path)
+            return str(out_path)
         except Exception:
-            logger.exception("[姐姐] 语音合成失败")
+            logger.exception("[姐姐] SoVITS 语音转码失败")
             return None
         finally:
-            mp3_path.unlink(missing_ok=True)
+            raw_path.unlink(missing_ok=True)
 
     async def _fetch_news(self) -> str:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=15)) as session:

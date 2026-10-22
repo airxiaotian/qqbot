@@ -1,24 +1,26 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from perception import describe_image, transcribe_wav
 
 
 class PerceptionTests(unittest.TestCase):
-    def test_transcribe_without_audio_api(self):
+    @patch("perception.get_openai_client")
+    def test_transcribe_without_audio_api(self, get_client):
         client = MagicMock()
         del client.audio
-        text = transcribe_wav(b"1234", lambda _: client)
+        get_client.return_value = client
+        text = transcribe_wav(b"1234")
         self.assertIn("未配置", text)
 
-    def test_describe_image_calls_vision(self):
-        client = MagicMock()
+    @patch("perception.chat_completions_create")
+    def test_describe_image_calls_vision(self, create):
         choice = MagicMock()
         choice.message.content = "一只猫"
-        client.chat.completions.create.return_value.choices = [choice]
-        out = describe_image("abcd", lambda _: client)
+        create.return_value.choices = [choice]
+        out = describe_image("abcd")
         self.assertEqual(out, "一只猫")
-        self.assertTrue(client.chat.completions.create.called)
+        self.assertTrue(create.called)
 
 
 if __name__ == "__main__":
