@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qqbot"
+version = "0.1.0"
+description = "A tiny QQ bot library with a oneesan persona."
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [{ name = "airxiaotian" }]
+
+[tool.setuptools]
+packages = ["qqbot"]
