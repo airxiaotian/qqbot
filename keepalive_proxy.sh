@@ -4,6 +4,11 @@ PROXY_DIR=~/qqbot/proxy
 VENV="$PROXY_DIR/.venv/bin/python3"
 LOG=$PROXY_DIR/../proxy.log
 PORT=8766
+DISABLED="$PROXY_DIR/.keepalive_disabled"
+
+if [ -f "$DISABLED" ]; then
+  exit 0
+fi
 
 if [ ! -x "$VENV" ]; then
   python3 -m venv "$PROXY_DIR/.venv"

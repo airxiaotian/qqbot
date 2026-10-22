@@ -3133,3 +3133,13 @@ INFO:__main__:回复未通过检查，重写一次: ['和最近的回复开头�
 INFO:httpx:HTTP Request: POST https://api.githubcopilot.com/chat/completions "HTTP/1.1 200 OK"
 INFO:__main__:AI 响应: 弟弟君，这是什么意思呀。
 INFO:     127.0.0.1:50761 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [75418]
+[2026-10-22 19:58:01] 代理未运行，启动中...
+[2026-10-22 19:58:01] 代理已启动 (PID 94328)
+INFO:     Started server process [94328]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8766 (Press CTRL+C to quit)

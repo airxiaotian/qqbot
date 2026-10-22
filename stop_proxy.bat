@@ -1,9 +1,16 @@
 @echo off
 setlocal EnableExtensions
-REM 停止本机代理（与 start_proxy 同端口 8766）
+REM 停止本机代理，并禁止 keepalive 再次拉起（与 stop_proxy.sh 同逻辑）
 
 set "PORT=8766"
+set "PROXY_DIR=%~dp0proxy"
+set "DISABLED=%PROXY_DIR%\.keepalive_disabled"
 set "FOUND=0"
+
+if not exist "%PROXY_DIR%" mkdir "%PROXY_DIR%"
+type nul > "%DISABLED%"
+echo Keepalive disabled: %DISABLED%
+echo Run start_proxy again to clear this flag.
 
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":%PORT%" ^| findstr "LISTENING"') do (
   set "FOUND=1"

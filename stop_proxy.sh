@@ -1,7 +1,13 @@
 #!/bin/bash
-# 停止本机代理（与 start_proxy.sh / keepalive_proxy.sh 同端口）
+# 停止本机代理，并禁止 keepalive_proxy.sh 再次拉起
 
 PORT=8766
+PROXY_DIR="${QQBOT_PROXY_DIR:-$HOME/qqbot/proxy}"
+DISABLED="$PROXY_DIR/.keepalive_disabled"
+
+mkdir -p "$PROXY_DIR"
+touch "$DISABLED"
+echo "已禁用保活（$DISABLED）。再次 start_proxy.sh 会清除此标志。"
 
 if ! command -v lsof >/dev/null 2>&1; then
   echo "未找到 lsof，无法按端口停止代理。"

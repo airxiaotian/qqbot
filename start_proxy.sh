@@ -4,6 +4,8 @@
 PROXY_DIR=~/qqbot/proxy
 VENV="$PROXY_DIR/.venv/bin/python3"
 
+rm -f "$PROXY_DIR/.keepalive_disabled"
+
 if [ ! -x "$VENV" ]; then
   echo "创建 proxy/.venv ..."
   python3 -m venv "$PROXY_DIR/.venv"
