@@ -3121,3 +3121,15 @@ INFO:__main__:AI 响应: ```json
 ]
 ```
 INFO:     127.0.0.1:65187 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:__main__:记忆整理请求（2 条）
+INFO:httpx:HTTP Request: POST https://api.githubcopilot.com/chat/completions "HTTP/1.1 200 OK"
+INFO:__main__:AI 响应: ```json
+{"tool":"none","args":{}}
+```
+INFO:     127.0.0.1:50761 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:__main__:策略 normal 模型 claude-haiku-4.5 用户消息: [2026-10-22 18:56 | User ID: 273585129, Nickname: 肮脏的人类S | 现在是私聊，对方就是弟弟本人。可以用只给他
+INFO:httpx:HTTP Request: POST https://api.githubcopilot.com/chat/completions "HTTP/1.1 200 OK"
+INFO:__main__:回复未通过检查，重写一次: ['和最近的回复开头太像'] 草稿: 弟弟君，这是什么意思呀。
+INFO:httpx:HTTP Request: POST https://api.githubcopilot.com/chat/completions "HTTP/1.1 200 OK"
+INFO:__main__:AI 响应: 弟弟君，这是什么意思呀。
+INFO:     127.0.0.1:50761 - "POST /v1/chat/completions HTTP/1.1" 200 OK
