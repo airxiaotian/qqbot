@@ -46,7 +46,7 @@
     {
       "id": "hermes_openai_source",
       "type": "openai_chat_completion",
-      "api_base": "http://host.docker.internal:8766/v1",
+      "api_base": "http://host.docker.internal:8765/v1",
       "api_key": "hermes-sk-test",
       "key": [
         "mock"

@@ -5,7 +5,7 @@ import os
 
 import aiohttp
 
-PERCEIVE_URL = os.environ.get("QQBOT_PERCEIVE_URL", "http://host.docker.internal:8766/v1/perceive")
+PERCEIVE_URL = os.environ.get("QQBOT_PERCEIVE_URL", "http://host.docker.internal:8765/v1/perceive")
 
 
 async def perceive(kind: str, data: bytes, timeout: float = 45) -> str:

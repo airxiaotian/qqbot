@@ -5,28 +5,39 @@
 
 import base64
 import glob
+import logging
 import os
 import re
 import sys
+from pathlib import Path
 
-HERMES_PATH = os.path.expanduser("~/.hermes/hermes-agent")
-HERMES_VENV = os.path.join(HERMES_PATH, "venv/lib")
-venv_site = glob.glob(os.path.join(HERMES_VENV, "python*/site-packages"))
-for p in venv_site:
-    if p not in sys.path:
-        sys.path.insert(0, p)
-sys.path.insert(0, HERMES_PATH)
+QQBOT_USE_HERMES = os.getenv("QQBOT_USE_HERMES", "false").strip().lower() not in {"0", "false", "no", "off"}
+
+if QQBOT_USE_HERMES:
+    HERMES_PATH = os.path.expanduser("~/.hermes/hermes-agent")
+    HERMES_VENV = os.path.join(HERMES_PATH, "venv/lib")
+    venv_site = glob.glob(os.path.join(HERMES_VENV, "python*/site-packages"))
+    for p in venv_site:
+        if p not in sys.path:
+            sys.path.insert(0, p)
+    sys.path.insert(0, HERMES_PATH)
+    if not os.path.isdir(HERMES_PATH):
+        logger = logging.getLogger(__name__)
+        logger.warning("QQBOT_USE_HERMES=true，但未检测到 ~/.hermes/hermes-agent，自动回退到直连 Copilot 模式")
+        QQBOT_USE_HERMES = False
 
 from dotenv import load_dotenv
 
+_env_root = Path(__file__).resolve().parent.parent
+load_dotenv(_env_root / ".env")
 load_dotenv(os.path.expanduser("~/.hermes/.env"))
-load_dotenv(os.path.join(HERMES_PATH, ".env"))
+if QQBOT_USE_HERMES:
+    load_dotenv(os.path.join(os.path.expanduser("~/.hermes/hermes-agent"), ".env"))
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-import logging
 
 from dialog import (
     LIGHT_MODEL,
@@ -70,19 +81,62 @@ _REASONING_SPLIT_RE = re.compile(r"\n\s*-{3,}\s*\n")
 _clients = {}
 
 
-def get_client(model: str):
-    if model not in _clients:
-        from agent.auxiliary_client import resolve_provider_client
+def _direct_client_for_model(model: str):
+    try:
+        from openai import OpenAI
+    except Exception as exc:  # pragma: no cover - 环境未装 openai 时给出清晰错误
+        raise RuntimeError("直连 Copilot 模式需要 openai 包，检查 Hermes venv 或项目依赖") from exc
 
-        client, _ = resolve_provider_client("copilot", model=model)
-        if client is None and model != LIGHT_MODEL:
-            logger.warning("%s 不可用，改用 %s", model, LIGHT_MODEL)
-            return get_client(LIGHT_MODEL)
-        if client is None:
-            raise RuntimeError(
-                "无法获取 Copilot 客户端，检查 ~/.hermes/.env 里的 COPILOT_GITHUB_TOKEN"
-            )
-        _clients[model] = client
+    token = (
+        os.getenv("COPILOT_GITHUB_TOKEN")
+        or os.getenv("GH_TOKEN")
+        or os.getenv("GITHUB_TOKEN")
+        or ""
+    ).strip()
+    if not token or token.startswith("ghp_"):
+        raise RuntimeError(
+            "直连 Copilot 模式没有有效令牌。设置 COPILOT_GITHUB_TOKEN / GH_TOKEN / GITHUB_TOKEN，且不要使用 ghp_ PAT。"
+        )
+
+    base_url = os.getenv("QQBOT_COPILOT_BASE_URL", "https://api.githubcopilot.com").rstrip("/")
+    client = OpenAI(
+        api_key=token,
+        base_url=base_url,
+        default_headers={
+            "Editor-Version": "vscode/1.104.1",
+            "User-Agent": "qqbot-proxy/1.0",
+            "Copilot-Integration-Id": "vscode-chat",
+            "Openai-Intent": "conversation-edits",
+            "x-initiator": "agent",
+        },
+    )
+    _clients[model] = client
+    return client
+
+
+def get_client(model: str):
+    global QQBOT_USE_HERMES
+    if model not in _clients:
+        if QQBOT_USE_HERMES:
+            try:
+                from agent.auxiliary_client import resolve_provider_client
+            except ModuleNotFoundError:
+                logger.warning("Hermes 运行时未安装，自动回退到直连 Copilot 模式")
+                QQBOT_USE_HERMES = False
+                _clients[model] = _direct_client_for_model(model)
+                return _clients[model]
+
+            client, _ = resolve_provider_client("copilot", model=model)
+            if client is None and model != LIGHT_MODEL:
+                logger.warning("%s 不可用，改用 %s", model, LIGHT_MODEL)
+                return get_client(LIGHT_MODEL)
+            if client is None:
+                raise RuntimeError(
+                    "无法获取 Copilot 客户端，检查 ~/.hermes/.env 里的 COPILOT_GITHUB_TOKEN"
+                )
+            _clients[model] = client
+        else:
+            _clients[model] = _direct_client_for_model(model)
     return _clients[model]
 
 
@@ -317,4 +371,4 @@ async def chat_completions(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8766)
+    uvicorn.run(app, host="0.0.0.0", port=8765)

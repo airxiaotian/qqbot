@@ -119,14 +119,21 @@ docker-compose up -d --build
 docker exec -it [容器名] /bin/bash
 ```
 
-## 启动本地代理（Hermes + Copilot）
+## 启动本地代理（Hermes / 直连 Copilot 切换）
 
-本机需已安装 Hermes（`~/.hermes/hermes-agent`），Copilot 令牌配置在 `~/.hermes/.env`（如 `COPILOT_GITHUB_TOKEN`）。
+本机需已安装 Hermes（`~/.hermes/hermes-agent`），或者直接配置 `COPILOT_GITHUB_TOKEN` / `GITHUB_TOKEN`。通过环境变量 `QQBOT_USE_HERMES` 控制：
 
 ```bash
+export QQBOT_USE_HERMES=true   # 走 Hermes 认证
+# 或
+export QQBOT_USE_HERMES=false  # 走直接 Copilot API
+
 ~/qqbot/start_proxy.sh
 # 停止并禁用保活：~/qqbot/stop_proxy.sh
 ```
+
+Hermes 场景下，Copilot 令牌配置在 `~/.hermes/.env`（如 `COPILOT_GITHUB_TOKEN`）。
+直连 Copilot 场景下，令牌可写在项目根 `.env` 或 `~/.hermes/.env`，并配合 `QQBOT_COPILOT_BASE_URL`。
 
 可选环境变量：`QQBOT_MODEL`、`QQBOT_MODEL_HEAVY`（在启动代理的 shell 或 cron 里 export）。
 

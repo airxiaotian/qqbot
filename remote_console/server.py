@@ -3,6 +3,7 @@
 import hashlib
 import hmac
 import ipaddress
+import os
 import sys
 import json
 import re
@@ -15,22 +16,37 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-PROJECT = Path("/Users/tciuser1/qqbot").resolve()
-HOME_DIR = Path.home() / ".qqbot-remote"
+def project_root() -> Path:
+    env_value = os.environ.get("QQBOT_REMOTE_PROJECT")
+    if env_value:
+        return Path(env_value).expanduser().resolve()
+    return Path(__file__).resolve().parents[1]
+
+
+def home_dir() -> Path:
+    env_value = os.environ.get("QQBOT_REMOTE_HOME")
+    if env_value:
+        return Path(env_value).expanduser().resolve()
+    return Path.home() / ".qqbot-remote"
+
+
+PROJECT = project_root()
+HOME_DIR = home_dir()
 CONFIG_PATH = HOME_DIR / "config.json"
 AUTH_PATH = HOME_DIR / "auth.json"
 JOBS_PATH = HOME_DIR / "jobs.jsonl"
 KEY_PATH = HOME_DIR / "cursor_api_key"
-PORT = 8791
+PORT = int(os.environ.get("QQBOT_REMOTE_PORT", "8791"))
+LOCAL_ONLY = os.environ.get("QQBOT_REMOTE_LOCAL_ONLY", "false").strip().lower() in {"1", "true", "yes", "on"}
 MAX_BODY = 64_000
 MAX_INSTRUCTION = 8_000
 SESSION_SECONDS = 12 * 3600
 LOCK_SECONDS = 600
 MAX_FAILURES = 8
 
-GUARD = """你在本机修改 /Users/tciuser1/qqbot。只改完成下面指示所必需的文件。
+GUARD = f"""你在本机修改 {PROJECT}。只改完成下面指示所必需的文件。
 禁止读取、打印或提交密钥、令牌、cookie、密码、.env、auth.json、cursor_api_key。
-禁止修改 /Users/tciuser1/.qqbot-remote。
+禁止修改 {HOME_DIR}。
 禁止删除项目目录以外的文件，禁止修改系统服务、launchd、crontab、Tailscale 或防火墙。
 禁止把任何服务改成监听 0.0.0.0 或公网。
 改完后运行和改动相关的检查，最后用简短中文说明改了什么、怎么验证的。
@@ -56,10 +72,20 @@ def load_config() -> dict:
         data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         data = {}
+    env_hosts = [
+        item.strip()
+        for item in os.environ.get("QQBOT_REMOTE_ALLOWED_HOSTNAMES", "").split(",")
+        if item.strip()
+    ]
+    env_nodes = [
+        item.strip()
+        for item in os.environ.get("QQBOT_REMOTE_ALLOWED_NODE_IDS", "").split(",")
+        if item.strip()
+    ]
     return {
-        "port": int(data.get("port") or PORT),
-        "allowed_hostnames": [str(item) for item in data.get("allowed_hostnames") or []],
-        "allowed_node_ids": [str(item) for item in data.get("allowed_node_ids") or []],
+        "port": int(data.get("port") or os.environ.get("QQBOT_REMOTE_PORT") or PORT),
+        "allowed_hostnames": [str(item) for item in (data.get("allowed_hostnames") or [])] + env_hosts,
+        "allowed_node_ids": [str(item) for item in (data.get("allowed_node_ids") or [])] + env_nodes,
     }
 
 
@@ -141,14 +167,24 @@ def device_allowed(info: dict, config: dict) -> bool:
 
 
 def tailscale_bin() -> str:
+    env_value = os.environ.get("QQBOT_REMOTE_TAILSCALE_BIN")
+    if env_value:
+        candidate = Path(env_value).expanduser()
+        if candidate.is_file():
+            return str(candidate)
     candidates = [
         shutil.which("tailscale"),
+        "C:\\Program Files\\Tailscale\\tailscale.exe",
+        "C:\\Program Files (x86)\\Tailscale\\tailscale.exe",
         "/Applications/Tailscale.app/Contents/MacOS/Tailscale",
         "/opt/homebrew/bin/tailscale",
     ]
     for candidate in candidates:
-        if candidate and Path(candidate).is_file():
-            return candidate
+        if not candidate:
+            continue
+        path = Path(candidate)
+        if path.is_file():
+            return str(path)
     raise FileNotFoundError("未安装 Tailscale")
 
 
@@ -160,7 +196,7 @@ def is_tailscale_ipv4(address: str) -> bool:
 
 
 def tailscale_ipv4(binary: str) -> str:
-    output = subprocess.check_output([binary, "ip", "-4"], text=True, timeout=5)
+    output = subprocess.check_output([binary, "ip", "-4"], text=True, encoding="utf-8", errors="replace", timeout=5)
     address = output.strip().splitlines()[0].strip()
     if not is_tailscale_ipv4(address):
         raise RuntimeError(f"拒绝监听 {address}：只允许 Tailscale 的 100.64.0.0/10 地址")
@@ -174,6 +210,8 @@ def whois(binary: str, address: str) -> dict | None:
         output = subprocess.check_output(
             [binary, "whois", "--json", address],
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=5,
             stderr=subprocess.DEVNULL,
         )
@@ -181,7 +219,7 @@ def whois(binary: str, address: str) -> dict | None:
         return None
     try:
         data = json.loads(output)
-    except ValueError:
+    except (TypeError, ValueError):
         return None
     node = data.get("Node") or data.get("node") or {}
     user = data.get("User") or data.get("user") or {}
@@ -371,6 +409,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def authorized_device(self) -> dict | None:
+        if LOCAL_ONLY:
+            return {"id": "local", "hostname": "local", "dns": "localhost"}
         info = self.peer()
         if info is None:
             self.reject(403, "只能通过 Tailscale 访问")
@@ -492,6 +532,13 @@ def main() -> None:
             print("密码已经存在，没有重新生成")
         return
     config = load_config()
+    if LOCAL_ONLY:
+        address = "127.0.0.1"
+        Handler.binary = "local"
+        server = ThreadingHTTPServer((address, config["port"]), Handler)
+        print(f"监听 http://{address}:{server.server_address[1]} （本地模式）")
+        server.serve_forever()
+        return
     if not config["allowed_hostnames"] and not config["allowed_node_ids"]:
         raise SystemExit(
             "还没有指定设备，控制台不会启动。\n"

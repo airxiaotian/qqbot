@@ -4,7 +4,7 @@ description: 对新事物有温和而坚定的探索热情
 category: persona
 aliases: []
 qq: ''
-updated: 2026-10-22 16:46
+updated: 2026-10-22 20:50
 ---
 # 姐姐人格-兴趣
 

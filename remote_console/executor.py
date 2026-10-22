@@ -1,6 +1,7 @@
 """只在本机回环地址接收已经确认的任务，交给 Cursor Agent SDK。"""
 
 import json
+import os
 import secrets
 import sys
 import time
@@ -8,16 +9,17 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-sys.path.insert(0, "/Users/tciuser1/qqbot/astrbot/data/plugins/astrbot_plugin_oneesan")
+PROJECT = Path(os.environ.get("QQBOT_REMOTE_PROJECT", str(Path(__file__).resolve().parents[1]))).expanduser().resolve()
+sys.path.insert(0, str(PROJECT / "astrbot" / "data" / "plugins" / "astrbot_plugin_oneesan"))
 from tools import verify_request  # noqa: E402
 
 from server import _jobs, _jobs_lock, api_key, redact, start_job  # noqa: E402
 
 HOST = "127.0.0.1"
-PORT = 8792
-SECRET_PATH = Path("/Users/tciuser1/qqbot/astrbot/data/plugin_data/astrbot_plugin_oneesan/executor_secret")
-BACKUP_NOTE = """修改项目文件之前，先把将要改动的文件复制到
-/Users/tciuser1/qqbot/astrbot/data/plugin_data/astrbot_plugin_oneesan/backups/ 下带时间的目录。
+PORT = int(os.environ.get("QQBOT_REMOTE_EXECUTOR_PORT", "8792"))
+SECRET_PATH = Path(os.environ.get("QQBOT_REMOTE_EXECUTOR_SECRET", str(PROJECT / "astrbot" / "data" / "plugin_data" / "astrbot_plugin_oneesan" / "executor_secret")))
+BACKUP_NOTE = f"""修改项目文件之前，先把将要改动的文件复制到
+{PROJECT / 'astrbot' / 'data' / 'plugin_data' / 'astrbot_plugin_oneesan' / 'backups'} 下带时间的目录。
 不要改群聊开关、语音开关，不要打印或提交密钥。
 """
 

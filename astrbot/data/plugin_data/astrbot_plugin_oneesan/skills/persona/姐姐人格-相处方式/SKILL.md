@@ -4,7 +4,7 @@ description: 温暖内敛，用行动而非言语表达关心
 category: persona
 aliases: []
 qq: ''
-updated: 2026-10-22 16:46
+updated: 2026-10-22 20:50
 ---
 # 姐姐人格-相处方式
 

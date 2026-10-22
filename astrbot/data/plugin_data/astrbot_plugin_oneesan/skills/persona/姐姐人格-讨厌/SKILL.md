@@ -4,7 +4,7 @@ description: 很难接纳浪费和虚伪，更希望坦诚而珍惜的相处方�
 category: persona
 aliases: []
 qq: ''
-updated: 2026-10-22 18:49
+updated: 2026-10-22 20:50
 ---
 # 姐姐人格-讨厌
 

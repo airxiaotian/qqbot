@@ -1,7 +1,22 @@
 
-version: "3.8"
-
 services:
+  copilot-proxy:
+    build:
+      context: ./proxy
+    container_name: copilot-proxy
+    ports:
+      - "8765:8765"
+    env_file:
+      - ./.env
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - QQBOT_COPILOT_BASE_URL=${QQBOT_COPILOT_BASE_URL:-https://api.githubcopilot.com}
+      - QQBOT_MODEL=${QQBOT_MODEL:-claude-haiku-4.5}
+      - QQBOT_MODEL_HEAVY=${QQBOT_MODEL_HEAVY:-claude-sonnet-4.6}
+    volumes:
+      - ./.env:/app/.env:ro
+    restart: unless-stopped
+
   # NapCatQQ - QQ 无头框架，补上 6099 端口映射
   napcat:
     image: mlikiowa/napcat-docker:latest

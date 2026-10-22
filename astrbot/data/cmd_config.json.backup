@@ -46,7 +46,7 @@
     {
       "provider_id": "hermes_openai",
       "provider_type": "openai_compatible",
-      "api_base": "http://host.docker.internal:8766/v1",
+      "api_base": "http://host.docker.internal:8765/v1",
       "api_key": "hermes-sk-test",
       "model": "hermes-oneesan",
       "enable": true,

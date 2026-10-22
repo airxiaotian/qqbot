@@ -4,7 +4,7 @@ description: 信奉适度足够的生活哲学，认为过程比结果更值得�
 category: persona
 aliases: []
 qq: ''
-updated: 2026-10-22 18:49
+updated: 2026-10-22 20:50
 ---
 # 姐姐人格-观点
 

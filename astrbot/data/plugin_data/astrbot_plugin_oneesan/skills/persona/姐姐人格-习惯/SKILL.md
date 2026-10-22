@@ -4,7 +4,7 @@ description: 做事稳妥有条理，习惯性地察言观色并照顾他人感�
 category: persona
 aliases: []
 qq: ''
-updated: 2026-10-22 16:46
+updated: 2026-10-22 20:50
 ---
 # 姐姐人格-习惯
 
