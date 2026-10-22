@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Optional
 
 
@@ -17,6 +17,7 @@ class Reply:
 
     @property
     def content(self) -> str:
+        """Compatibility alias for the reply text."""
         return self.text
 
     def __str__(self) -> str:
