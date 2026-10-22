@@ -1,0 +1,8 @@
+{"time": "1792661148", "session": "qq_napcat:FriendMessage:273585129", "tool": "send_group", "stage": "执行", "args": "{\"target\": \"这个群\", \"text\": \"我回来了！\", \"session\": \"qq_napcat:GroupMessage:791213409\", \"label\": \"791213409\"}"}
+{"time": "1792661225", "session": "qq_napcat:FriendMessage:273585129", "tool": "health", "stage": "执行", "args": "{}"}
+{"time": "1792661242", "session": "qq_napcat:FriendMessage:273585129", "tool": "status", "stage": "执行", "args": "{}"}
+{"time": "1792661248", "session": "qq_napcat:FriendMessage:273585129", "tool": "mood", "stage": "执行", "args": "{}"}
+{"time": "1792661295", "session": "qq_napcat:FriendMessage:273585129", "tool": "search", "stage": "执行", "args": "{\"query\": \"qqbot教程\"}"}
+{"time": "1792661999", "session": "qq_napcat:FriendMessage:273585129", "tool": "mood", "stage": "执行", "args": "{}"}
+{"time": "1792662031", "session": "qq_napcat:FriendMessage:273585129", "tool": "memory_query", "stage": "执行", "args": "{\"text\": \"姐姐喜欢什么，讨厌什么\"}"}
+{"time": "1792662057", "session": "qq_napcat:FriendMessage:273585129", "tool": "memory_query", "stage": "执行", "args": "{\"text\": \"大肥鱼在群里说的\"}"}

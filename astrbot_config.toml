@@ -1,0 +1,27 @@
+# AstrBot 配置文件
+
+[basic]
+# 机器人名称
+bot_name = "姐姐"
+# 机器人管理员QQ号（用自己的小号）
+admin_qq = ["123456789"]
+
+[llm]
+# 使用自定义的本地 OpenAI 兼容 API
+# 在 Docker 网络中，可以通过 copilot-proxy 容器名访问
+# 或者用 host.docker.internal:8765（需要 Docker Desktop 支持）
+type = "openai"
+api_key = "mock"
+base_url = "http://copilot-proxy:8765"
+model = "mock-oneesan"
+temperature = 0.7
+
+[plugin]
+# 启用的插件
+enabled = ["core"]
+
+# QQ 连接配置
+[qq]
+# NapCatQQ 服务地址
+# 在 Docker 网络中用容器名 napcat
+napcat_url = "http://napcat:3000"

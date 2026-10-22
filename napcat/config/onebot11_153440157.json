@@ -1,0 +1,70 @@
+{
+  "network": {
+    "httpServers": [
+      {
+        "host": "0.0.0.0",
+        "port": 3000,
+        "enableCors": true,
+        "name": "http-server",
+        "enable": false,
+        "enableWebsocket": false,
+        "messagePostFormat": "array",
+        "token": "",
+        "debug": false
+      }
+    ],
+    "httpSseServers": [],
+    "httpClients": [],
+    "websocketServers": [
+      {
+        "enable": true,
+        "name": "websocket-server",
+        "host": "127.0.0.1",
+        "port": 6199,
+        "reportSelfMessage": false,
+        "enableForcePushEvent": true,
+        "messagePostFormat": "string",
+        "token": "",
+        "debug": false,
+        "heartInterval": 30000
+      }
+    ],
+    "websocketClients": [
+      {
+        "url": "ws://astrbot:6199/ws",
+        "name": "websocket-client",
+        "enable": false,
+        "messagePostFormat": "array",
+        "reportSelfMessage": false,
+        "reconnectInterval": 5000,
+        "token": "",
+        "debug": false,
+        "heartInterval": 30000,
+        "verifyCertificate": true
+      },
+      {
+        "enable": true,
+        "name": "astrbot",
+        "url": "ws://astrbot:6199/ws",
+        "reportSelfMessage": false,
+        "messagePostFormat": "array",
+        "token": "",
+        "debug": false,
+        "heartInterval": 30000,
+        "reconnectInterval": 30000,
+        "verifyCertificate": true
+      }
+    ],
+    "plugins": []
+  },
+  "musicSignUrl": "",
+  "enableLocalFile2Url": false,
+  "parseMultMsg": false,
+  "imageDownloadProxy": "",
+  "timeout": {
+    "baseTimeout": 10000,
+    "uploadSpeedKBps": 256,
+    "downloadSpeedKBps": 256,
+    "maxTimeout": 1800000
+  }
+}

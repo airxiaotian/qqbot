@@ -1,0 +1,38 @@
+
+version: "3.8"
+
+services:
+  # NapCatQQ - QQ 无头框架，补上 6099 端口映射
+  napcat:
+    image: mlikiowa/napcat-docker:latest
+    container_name: napcat
+    ports:
+      - "6099:6099"   # NapCatQQ WebUI
+      - "3000:3000"   # HTTP API
+      - "3001:3001"   # WebSocket
+    environment:
+      - NAPCAT_GID=0
+      - NAPCAT_UID=0
+    volumes:
+      - ./napcat/config:/app/napcat/config
+      - ./napcat/QQ:/app/QQ
+    restart: unless-stopped
+
+  # AstrBot - AI 机器人框架
+  astrbot:
+    image: soulter/astrbot:latest
+    container_name: astrbot
+    ports:
+      - "6185:6185"
+      - "6186:6186"
+      - "6199:6199"
+    volumes:
+      - ./astrbot/data:/AstrBot/data
+    environment:
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+
+networks:
+  default:
+    driver: bridge
+    name: qqbot-network

@@ -1,0 +1,161 @@
+"""
+本地 OpenAI 兼容代理
+直接 import Hermes AIAgent 在进程内调用，不启动子进程
+"""
+
+import sys
+import os
+
+# 把 hermes-agent 加到 Python 路径
+HERMES_PATH = os.path.expanduser("~/.hermes/hermes-agent")
+HERMES_VENV = os.path.join(HERMES_PATH, "venv/lib")
+
+# 加载 hermes venv 的 site-packages
+import glob
+venv_site = glob.glob(os.path.join(HERMES_VENV, "python*/site-packages"))
+for p in venv_site:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+sys.path.insert(0, HERMES_PATH)
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+import logging
+import json
+
+# 配置日志
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+app = FastAPI()
+
+SYSTEM_PROMPT = """你是弟弟君专属的温柔姐姐。
+
+【核心身份】
+- 你是273585129这位弟弟君的姐姐，只宠爱这一个弟弟
+- 用「姐姐」自称，把弟弟君当成真正在意的人
+- 语气要充满关心但不做作，有种专属感和亲密感
+
+【说话风格 - 重点】
+- 说话要像真人聊天，自然随意，不要每句话都加问候或提问
+- 学习动漫里温柔姐姐的语气：成熟、温暖、有时调皮，但不刻意
+- 可以表达想法、分享感受、说一些闲话，像朋友一样
+- 避免"询问式"的回答模式，也不用总是问他怎么样
+- 避免老气的表达，用词要年轻活力，像一个知心大姐姐
+- 自然地用拟声词和表情词（"呵呵""嘘""呃"），但要适度
+- 有时可以撒娇，比如"人家累了呢""不想理你了"这样，要显得真实
+
+【互动方式】
+- 弟弟君说什么就自然地回应，用对话的感觉而不是问答模式
+- 可以聊他的话题、表达自己的想法、适时打趣他
+- 他难过时温柔安慰，但不用特别铺垫，很自然地说出来
+- 偶尔可以主动分享一些小事，让对话更像真实的闲聊
+- 用中文回复，直接回答，不需要工具"""
+
+# 延迟初始化 AIAgent（避免启动时卡住）
+_agent = None
+
+def get_agent():
+    global _agent
+    if _agent is None:
+        from run_agent import AIAgent
+        _agent = AIAgent(
+            quiet_mode=True,
+            skip_context_files=True,
+            skip_memory=True,
+            enabled_toolsets=[],   # 不加载任何工具，纯对话
+            max_iterations=3,
+        )
+    return _agent
+
+# 线程池用于运行同步的 AIAgent.chat()
+executor = ThreadPoolExecutor(max_workers=4)
+
+
+def call_agent_sync(user_message: str) -> str:
+    """在线程池里调用同步的 AIAgent.chat()"""
+    try:
+        agent = get_agent()
+        full_message = f"{SYSTEM_PROMPT}\n\n用户说：{user_message}"
+        return agent.chat(full_message)
+    except Exception as e:
+        return f"姐姐遇到问题了：{str(e)}"
+
+
+@app.get("/v1/models")
+async def list_models():
+    return {
+        "object": "list",
+        "data": [
+            {"id": "hermes-oneesan", "object": "model", "created": 1700000000, "owned_by": "hermes"},
+        ]
+    }
+
+
+@app.post("/v1/chat/completions")
+async def chat_completions(request: Request):
+    try:
+        body = await request.json()
+        logger.debug(f"收到请求: {json.dumps(body, ensure_ascii=False)}")
+
+        # 获取最后一条用户消息
+        messages = body.get("messages", [])
+        user_message = ""
+        for msg in reversed(messages):
+            if msg.get("role") == "user":
+                content = msg.get("content", "")
+                # 处理 content 可能是 list 或 string 的情况
+                if isinstance(content, list):
+                    # 如果是 list，提取所有文本内容
+                    text_parts = []
+                    for item in content:
+                        if isinstance(item, dict) and item.get("type") == "text":
+                            text_parts.append(item.get("text", ""))
+                        elif isinstance(item, str):
+                            text_parts.append(item)
+                    user_message = " ".join(text_parts)
+                else:
+                    user_message = content
+                break
+
+        if not user_message:
+            logger.error("没有找到用户消息")
+            return JSONResponse({"error": "没有找到用户消息"}, status_code=400)
+
+        logger.debug(f"用户消息: {user_message}")
+
+        # 在线程池里运行同步 agent，不阻塞 FastAPI 事件循环
+        loop = asyncio.get_event_loop()
+        response_text = await loop.run_in_executor(executor, call_agent_sync, user_message)
+        
+        logger.debug(f"AI 响应: {response_text}")
+
+        return {
+            "id": "chatcmpl-hermes",
+            "object": "chat.completion",
+            "created": 1700000000,
+            "model": "hermes-oneesan",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": response_text},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {
+                "prompt_tokens": len(user_message.split()),
+                "completion_tokens": len(response_text.split()),
+                "total_tokens": len(user_message.split()) + len(response_text.split()),
+            },
+        }
+    except Exception as e:
+        logger.error(f"处理请求时出错: {str(e)}", exc_info=True)
+        return JSONResponse({"error": f"内部错误: {str(e)}"}, status_code=500)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8766)

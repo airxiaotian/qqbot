@@ -1,0 +1,7 @@
+name: astrbot_plugin_oneesan
+display_name: 姐姐
+desc: 群聊和语音可由弟弟私聊开关；从萌娘百科姐姐角色持续学习人格，也从B站学习内容和说法。
+version: 0.1.0
+astrbot_version: ">=4.26,<5"
+author: local
+repo: ""
